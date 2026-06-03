@@ -13,6 +13,12 @@ type Submission = {
   submissionLink: string | null;
 };
 
+type DetailedStudent = StudentInfo & {
+  status: SubmissionStatus | "Not Submitted";
+  submissionLink: string | null;
+};
+
+
 type Assignment = {
   id: number;
   name: string;
@@ -170,7 +176,7 @@ export default function MarksheetPage() {
   }, [allStats]);
 
   // Get detailed list of students for selected assignment
-  const getDetailedStudents = (assignmentId: string) => {
+  const getDetailedStudents = (assignmentId: string): DetailedStudent[] => {
     if (assignmentId === "all") return [];
     const assignment = assignments.find((a) => a.id === Number(assignmentId));
     if (!assignment) return [];
@@ -477,10 +483,10 @@ export default function MarksheetPage() {
               <>
                 {detailedStudents.length > 0 && (
                   <DetailedAssignmentView
+                    students={detailedStudents}
                     assignment={assignments.find(
                       (a) => a.id === Number(selectedAssignmentId)
                     )!}
-                    students={detailedStudents}
                   />
                 )}
               </>
@@ -502,10 +508,7 @@ function DetailedAssignmentView({
   students,
 }: {
   assignment: Assignment;
-  students: (StudentInfo & {
-    status: SubmissionStatus | "Not Submitted";
-    submissionLink: string | null;
-  })[];
+  students: DetailedStudent[];
 }) {
   const totalStudents = students.length;
   const submitted = students.filter((s) => s.status !== "Not Submitted").length;
