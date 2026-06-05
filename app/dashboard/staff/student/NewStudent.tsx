@@ -1,7 +1,7 @@
 // app/dashboard/staff/student/NewStudent.jsx
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const PROGRAMMES = [
   { value: "", label: "-- Select Programme --" },
@@ -15,10 +15,10 @@ const PROGRAMMES = [
 
 const STATUSES = [
   { value: "", label: "-- Select Status --" },
-  { value: "Active", label: "✅ Active" },
-  { value: "Inactive", label: "⏸️ Inactive" },
-  { value: "Graduated", label: "🎓 Graduated" },
-  { value: "Suspended", label: "🚫 Suspended" },
+  { value: "Enrolled", label: "📝 Enrolled" },
+  { value: "Deferred", label: "⏳ Deferred" },
+  { value: "Withdrawn", label: "🚪 Withdrawn" },
+  { value: "Completed", label: "🎓 Completed" },
 ];
 
 const ACADEMIC_YEARS = [
@@ -30,43 +30,86 @@ const ACADEMIC_YEARS = [
   { value: "2020-21", label: "2020-21" },
 ];
 
-export default function NewStudent() {
-  // ✅ Form data — empty object issues avoid করতে initial value {} রাখা ভালো
-  const [formData, setFormData] = useState({
-    studentId: "",
-    fullName: "",
-    email: "",
-    dateOfBirth: "",
-    programmeId: "",
-    academicYear: "",
-    status: "",
-  });
-
-  // ✅ Errors object
-  const [errors, setErrors] = useState<{[key: string]: string}>({});
-
-
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitSuccess, setSubmitSuccess] = useState(false);
-
-  const handleChange = (e : { target: { name: string; value: string } }) => {
-  const { name, value } = e.target;
-  setFormData((prev) => ({ ...prev, [name]: value }));
-  if (errors[name]) {  // ✅ errors কে object হিসেবে check করে
-  setErrors((prev) => ({ ...prev, [name]: "" }));
-}
-
+type StudentFormData = {
+  fullName: string;
+  email: string;
+  dateOfBirth: string;
+  programmeId: string;
+  academicYear: string;
+  status: string;
 };
 
+type Notification = {
+  type: "success" | "error";
+  title: string;
+  message?: string;
+  studentId?: string;
+  id: number; // for animation re-trigger
+};
 
-  const validate = () => {
-    const newErrors: { [key: string]: string } = {};
+const INITIAL_FORM: StudentFormData = {
+  fullName: "",
+  email: "",
+  dateOfBirth: "",
+  programmeId: "",
+  academicYear: "",
+  status: "",
+};
 
-    if (!formData.studentId.trim()) {
-      newErrors.studentId = "Student ID is required";
-    } else if (!/^STU-\d{4}-\d{4}$/.test(formData.studentId)) {
-      newErrors.studentId = "Format: STU-YYYY-XXXX (e.g., STU-2024-0001)";
+function buildStudentPayload(form: StudentFormData) {
+  return {
+    fullName: form.fullName,
+    email: form.email,
+    dateOfBirth: form.dateOfBirth || undefined,
+    programmeId: form.programmeId || undefined,
+    academicYear: form.academicYear || undefined,
+    status: form.status || undefined,
+  };
+}
+
+export default function NewStudent() {
+  const isMountedRef = useRef(true);
+  const fullNameRef = useRef<HTMLInputElement>(null);
+
+  // ✅ DECLARE STATE FIRST before using it in useEffect
+  const [formData, setFormData] = useState<StudentFormData>(INITIAL_FORM);
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [notification, setNotification] = useState<Notification | null>(null);
+
+  // ✅ Now use state in effects
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  // ✅ Auto-dismiss notifications after 4 seconds (success) or 5 seconds (error)
+  useEffect(() => {
+    if (!notification) return;
+    
+    const delay = notification.type === "success" ? 4000 : 5000;
+    const timer = setTimeout(() => {
+      if (isMountedRef.current) {
+        setNotification(null);
+      }
+    }, delay);
+
+    return () => clearTimeout(timer);
+  }, [notification]);
+
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: "" }));
     }
+  };
+
+  const validate = (): boolean => {
+    const newErrors: { [key: string]: string } = {};
 
     if (!formData.fullName.trim()) {
       newErrors.fullName = "Full name is required";
@@ -91,69 +134,117 @@ export default function NewStudent() {
       }
     }
 
-    if (!formData.programmeId) {
-      newErrors.programmeId = "Please select a programme";
-    }
-
-    if (!formData.academicYear) {
-      newErrors.academicYear = "Please select academic year";
-    }
-
-    if (!formData.status) {
-      newErrors.status = "Please select a status";
-    }
+    if (!formData.programmeId) newErrors.programmeId = "Please select a programme";
+    if (!formData.academicYear) newErrors.academicYear = "Please select academic year";
+    if (!formData.status) newErrors.status = "Please select a status";
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (e : React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setSubmitSuccess(false);
+    // setNotification(null);
 
     if (!validate()) {
+      setNotification({
+        type: "error",
+        id: Date.now(),
+        title: "Please fix the errors above",
+      });
       return;
     }
 
     setIsSubmitting(true);
-    await new Promise((resolve) => setTimeout(resolve, 1500));
 
-    console.log("Form submitted:", formData);
-    setIsSubmitting(false);
-    setSubmitSuccess(true);
+    // Capture the name BEFORE we reset the form
+    const submittedName = formData.fullName.trim();
 
-    setTimeout(() => {
-      setFormData({
-        studentId: "",
-        fullName: "",
-        email: "",
-        dateOfBirth: "",
-        programmeId: "",
-        academicYear: "",
-        status: "",
+    try {
+      const response = await fetch("/api/students", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(buildStudentPayload(formData)),
       });
-      setSubmitSuccess(false);
-    }, 2000);
+
+      const data = await response.json();
+      // console.log("[NewStudent] API response:", response.status, data);
+      if(response.status === 201) {
+          setNotification({
+          type: "success",
+          id: Date.now(),
+          title: "Student created successfully!",
+          message: `${submittedName} has been added to the system.`,
+        });
+        setIsSubmitting(false);
+        setFormData(INITIAL_FORM);
+        setErrors({});
+        fullNameRef.current?.focus();
+        return;
+      }
+
+      if (!response.ok) {
+        const message =
+          data?.message ??
+          data?.error ??
+          (response.status === 409
+            ? "A student with this email already exists"
+            : response.status === 400
+            ? "Please check the form for errors"
+            : "Failed to create student");
+        throw new Error(message);
+      }
+
+      const newStudentId = data?.data?.studentId ?? "";
+
+      if (isMountedRef.current) {
+        // ✅ Reset form FIRST
+        setFormData(INITIAL_FORM);
+        setErrors({});
+        setIsSubmitting(false);
+
+        // ✅ Then show success notification (with the captured name)
+        setNotification({
+          type: "success",
+          id: Date.now(),
+          title: "Student created successfully!",
+          message: `${submittedName} has been added to the system.`,
+          studentId: newStudentId,
+        });
+
+        // ✅ Focus the first input so the user can immediately type the next one
+        setTimeout(() => {
+          fullNameRef.current?.focus();
+        }, 100);
+      }
+    } catch (error) {
+      console.error("[NewStudent] Submit error:", error);
+      if (isMountedRef.current) {
+        setIsSubmitting(false);
+        const errorMessage =
+          error instanceof Error ? error.message : "An unexpected error occurred";
+        setNotification({
+          type: "error",
+          id: Date.now(),
+          title: "Failed to create student",
+          message: errorMessage,
+        });
+      }
+    }
   };
 
   const handleReset = () => {
-    setFormData({
-      studentId: "",
-      fullName: "",
-      email: "",
-      dateOfBirth: "",
-      programmeId: "",
-      academicYear: "",
-      status: "",
-    });
+    setFormData(INITIAL_FORM);
     setErrors({});
-    setSubmitSuccess(false);
+    setNotification(null);
   };
 
-  // ✅ FIX ১: Optional chaining ব্যবহার করা হয়েছে
-  // ✅ FIX ২: Boolean এ convert করা হয়েছে (!!)
+  const dismissNotification = () => {
+    setNotification(null);
+  };
+
   const inputClass = (fieldName: string) => {
-    const hasError = Boolean(errors?.[fieldName]); // ✅ safe access
+    const hasError = Boolean(errors[fieldName]);
     return `block w-full rounded-lg border ${
       hasError
         ? "border-red-300 focus:border-red-500 focus:ring-red-500"
@@ -162,27 +253,70 @@ export default function NewStudent() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 ">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+      <style>{`
+        @keyframes slideIn {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        @keyframes slideOut {
+          from {
+            opacity: 1;
+            transform: translateY(0);
+          }
+          to {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+        }
+      `}</style>
       <div className="max-w-3xl mx-auto">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">➕ Add New Student</h1>
           <p className="mt-2 text-sm text-gray-600">
-            Fill in the information below to register a new student in the system.
+            Fill in the information below to register a new student. A unique
+            student ID will be generated automatically.
           </p>
         </div>
 
-        {submitSuccess && (
-          <div className="mb-6 rounded-lg bg-green-50 border border-green-200 p-4 flex items-center gap-3">
-            <svg className="h-5 w-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-              <path
-                fillRule="evenodd"
-                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                clipRule="evenodd"
-              />
-            </svg>
-            <p className="text-sm font-medium text-green-800">
-              Student added successfully! Form will reset in a moment...
-            </p>
+        {/* ✅ Simple inline notification message */}
+        {notification && (
+          <div
+            key={notification.id}
+            role="alert"
+            className={`mb-6 p-4 rounded-lg border-l-4 ${
+              notification.type === "success"
+                ? "bg-green-100 border-green-500 text-green-800"
+                : "bg-red-100 border-red-500 text-red-800"
+            }`}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex-1">
+                <p className="font-bold text-lg">{notification.title}</p>
+                {notification.message && (
+                  <p className="text-sm mt-1">{notification.message}</p>
+                )}
+                {notification.studentId && (
+                  <p className="text-sm font-mono mt-2 bg-white/50 p-2 rounded inline-block">
+                    ID: <strong>{notification.studentId}</strong>
+                  </p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={dismissNotification}
+                className="text-xl font-bold hover:opacity-70"
+              >
+                ✕
+              </button>
+            </div>
           </div>
         )}
 
@@ -200,30 +334,14 @@ export default function NewStudent() {
           <div className="p-6 md:p-8 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label htmlFor="studentId" className="block text-sm font-semibold text-gray-700 mb-1.5">
-                  Student ID <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  id="studentId"
-                  name="studentId"
-                  value={formData.studentId}
-                  onChange={handleChange}
-                  placeholder="STU-2024-0001"
-                  className={inputClass("studentId")}
-                />
-                {errors.studentId && (
-                  <p className="mt-1.5 text-sm text-red-600 flex items-center gap-1">
-                    <span>⚠️</span> {errors.studentId}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label htmlFor="fullName" className="block text-sm font-semibold text-gray-700 mb-1.5">
+                <label
+                  htmlFor="fullName"
+                  className="block text-sm font-semibold text-gray-700 mb-1.5"
+                >
                   Full Name <span className="text-red-500">*</span>
                 </label>
                 <input
+                  ref={fullNameRef}
                   type="text"
                   id="fullName"
                   name="fullName"
@@ -238,11 +356,12 @@ export default function NewStudent() {
                   </p>
                 )}
               </div>
-            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-1.5">
+                <label
+                  htmlFor="email"
+                  className="block text-sm font-semibold text-gray-700 mb-1.5"
+                >
                   Email Address <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -260,9 +379,14 @@ export default function NewStudent() {
                   </p>
                 )}
               </div>
+            </div>
 
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label htmlFor="dateOfBirth" className="block text-sm font-semibold text-gray-700 mb-1.5">
+                <label
+                  htmlFor="dateOfBirth"
+                  className="block text-sm font-semibold text-gray-700 mb-1.5"
+                >
                   Date of Birth <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -279,11 +403,12 @@ export default function NewStudent() {
                   </p>
                 )}
               </div>
-            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label htmlFor="programmeId" className="block text-sm font-semibold text-gray-700 mb-1.5">
+                <label
+                  htmlFor="programmeId"
+                  className="block text-sm font-semibold text-gray-700 mb-1.5"
+                >
                   Programme <span className="text-red-500">*</span>
                 </label>
                 <select
@@ -305,9 +430,14 @@ export default function NewStudent() {
                   </p>
                 )}
               </div>
+            </div>
 
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label htmlFor="academicYear" className="block text-sm font-semibold text-gray-700 mb-1.5">
+                <label
+                  htmlFor="academicYear"
+                  className="block text-sm font-semibold text-gray-700 mb-1.5"
+                >
                   Academic Year <span className="text-red-500">*</span>
                 </label>
                 <select
@@ -329,30 +459,33 @@ export default function NewStudent() {
                   </p>
                 )}
               </div>
-            </div>
 
-            <div>
-              <label htmlFor="status" className="block text-sm font-semibold text-gray-700 mb-1.5">
-                Status <span className="text-red-500">*</span>
-              </label>
-              <select
-                id="status"
-                name="status"
-                value={formData.status}
-                onChange={handleChange}
-                className={inputClass("status")}
-              >
-                {STATUSES.map((s) => (
-                  <option key={s.value} value={s.value}>
-                    {s.label}
-                  </option>
-                ))}
-              </select>
-              {errors.status && (
-                <p className="mt-1.5 text-sm text-red-600 flex items-center gap-1">
-                  <span>⚠️</span> {errors.status}
-                </p>
-              )}
+              <div>
+                <label
+                  htmlFor="status"
+                  className="block text-sm font-semibold text-gray-700 mb-1.5"
+                >
+                  Status <span className="text-red-500">*</span>
+                </label>
+                <select
+                  id="status"
+                  name="status"
+                  value={formData.status}
+                  onChange={handleChange}
+                  className={inputClass("status")}
+                >
+                  {STATUSES.map((s) => (
+                    <option key={s.value} value={s.value}>
+                      {s.label}
+                    </option>
+                  ))}
+                </select>
+                {errors.status && (
+                  <p className="mt-1.5 text-sm text-red-600 flex items-center gap-1">
+                    <span>⚠️</span> {errors.status}
+                  </p>
+                )}
+              </div>
             </div>
           </div>
 
@@ -363,7 +496,12 @@ export default function NewStudent() {
               disabled={isSubmitting}
               className="inline-flex justify-center items-center gap-2 rounded-lg bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -381,8 +519,19 @@ export default function NewStudent() {
             >
               {isSubmitting ? (
                 <>
-                  <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <svg
+                    className="animate-spin h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
                     <path
                       className="opacity-75"
                       fill="currentColor"
@@ -393,7 +542,11 @@ export default function NewStudent() {
                 </>
               ) : (
                 <>
-                  <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                  <svg
+                    className="h-4 w-4"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
                     <path d="M10 5a.75.75 0 01.75.75v3.5h3.5a.75.75 0 010 1.5h-3.5v3.5a.75.75 0 01-1.5 0v-3.5h-3.5a.75.75 0 010-1.5h3.5v-3.5A.75.75 0 0110 5z" />
                   </svg>
                   Add Student

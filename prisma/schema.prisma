@@ -13,7 +13,14 @@ datasource db {
 }
 
 model User {
-  id    String @id @default(cuid())
-  name  String
-  email String @unique
+  id            String    @id @default(cuid())
+  studentId     String    @unique
+  name          String
+  email         String    @unique
+  dateOfBirth   DateTime?
+  programmeId   String?   // Store programme code as string, not FK
+  academicYear  String?
+  status        String?   @default("ACTIVE")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 }
