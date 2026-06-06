@@ -60,18 +60,19 @@ function SubmissionForm({
   onSuccess,
   onCancel,
 }: SubmissionFormProps) {
-  const fileInputRef                    = useRef<HTMLInputElement>(null);
-  const [dragOver,    setDragOver]      = useState(false);
-  const [uploading,   setUploading]     = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [dragOver, setDragOver] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [error,       setError]         = useState<string | null>(null);
-  const [confirmed,   setConfirmed]     = useState(false); // resubmit confirmation
+  const [error, setError] = useState<string | null>(null);
+  const [confirmed, setConfirmed] = useState(false); // resubmit confirmation
 
   const [inputStudentId, setInputStudentId] = useState<string>(studentId ?? "");
 
   // If there's an existing submission, require user to confirm before showing upload UI
   const isResubmit = !!existingSub;
   const showUploadUI = !isResubmit || confirmed;
+  const isLate = isDeadlinePassed(assessment.deadline);
 
   const validateFile = (file: File): string | null => {
     const ext = file.name.split(".").pop()?.toLowerCase();
@@ -82,7 +83,10 @@ function SubmissionForm({
 
   const handleFilePick = (file: File) => {
     const err = validateFile(file);
-    if (err) { setError(err); return; }
+    if (err) {
+      setError(err);
+      return;
+    }
     setError(null);
     setSelectedFile(file);
   };
@@ -95,22 +99,28 @@ function SubmissionForm({
   };
 
   const handleSubmit = async () => {
-    if (!selectedFile) { setError("Please select a file first."); return; }
+    if (!selectedFile) {
+      setError("Please select a file first.");
+      return;
+    }
     const sid = inputStudentId.trim();
-    if (!sid) { setError("Student ID is required."); return; }
+    if (!sid) {
+      setError("Student ID is required.");
+      return;
+    }
 
     setUploading(true);
     setError(null);
 
     try {
       const formData = new FormData();
-      formData.append("file",         selectedFile);
-      formData.append("studentId",    sid);
+      formData.append("file", selectedFile);
+      formData.append("studentId", sid);
       formData.append("assessmentId", assessment.id.toString());
       // Signal to API that this is a resubmission → upsert
       if (isResubmit) formData.append("resubmit", "true");
 
-      const res    = await fetch("/api/submissions", { method: "POST", body: formData });
+      const res = await fetch("/api/submissions", { method: "POST", body: formData });
       const result = await res.json();
 
       if (result.success) {
@@ -128,23 +138,62 @@ function SubmissionForm({
 
   return (
     <div className="border-t border-[#e8e8e0] px-5 py-5 bg-[#fafaf8] space-y-5">
+      {/* Late submission warning for past deadlines */}
+      {isLate && !existingSub && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 flex items-start gap-3">
+          <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
+            <svg
+              className="w-4 h-4 text-amber-600"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
+              />
+            </svg>
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-amber-800">Late Submission</p>
+            <p className="text-xs text-amber-700 mt-0.5">
+              The deadline was {formatDate(assessment.deadline)}. Your submission will be marked as late.
+            </p>
+          </div>
+        </div>
+      )}
+
       <p className="text-sm text-[#4a4a4a] leading-relaxed">{assessment.description}</p>
 
       {/* ── Previous submission info banner (always shown if exists) ────── */}
       {existingSub && (
-        <div className={`rounded-xl p-4 flex items-center justify-between
-          ${existingSub.isLate
-            ? "bg-orange-50 border border-orange-200"
-            : "bg-emerald-50 border border-emerald-200"}`}>
+        <div
+          className={`rounded-xl p-4 flex items-center justify-between
+          ${
+            existingSub.isLate
+              ? "bg-orange-50 border border-orange-200"
+              : "bg-emerald-50 border border-emerald-200"
+          }`}
+        >
           <div className="flex items-center gap-3">
-            <div className={`w-8 h-8 rounded-lg flex items-center justify-center
-              ${existingSub.isLate ? "bg-orange-100" : "bg-emerald-100"}`}>
+            <div
+              className={`w-8 h-8 rounded-lg flex items-center justify-center
+              ${existingSub.isLate ? "bg-orange-100" : "bg-emerald-100"}`}
+            >
               <svg
                 className={`w-4 h-4 ${existingSub.isLate ? "text-orange-600" : "text-emerald-600"}`}
-                fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
               >
-                <path strokeLinecap="round" strokeLinejoin="round"
-                  d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
+                />
               </svg>
             </div>
             <div>
@@ -157,12 +206,16 @@ function SubmissionForm({
               </p>
             </div>
           </div>
-          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full
-            ${existingSub.status === "Passed"
-              ? "bg-emerald-200 text-emerald-800"
-              : existingSub.status === "Failed"
-              ? "bg-red-100 text-red-700"
-              : "bg-gray-100 text-gray-600"}`}>
+          <span
+            className={`text-xs font-semibold px-2.5 py-1 rounded-full
+            ${
+              existingSub.status === "Passed"
+                ? "bg-emerald-200 text-emerald-800"
+                : existingSub.status === "Failed"
+                ? "bg-red-100 text-red-700"
+                : "bg-gray-100 text-gray-600"
+            }`}
+          >
             {existingSub.status}
           </span>
         </div>
@@ -173,10 +226,18 @@ function SubmissionForm({
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 space-y-3">
           <div className="flex items-start gap-3">
             <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
-              <svg className="w-4 h-4 text-amber-600" fill="none" viewBox="0 0 24 24"
-                stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round"
-                  d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+              <svg
+                className="w-4 h-4 text-amber-600"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
+                />
               </svg>
             </div>
             <div>
@@ -234,21 +295,31 @@ function SubmissionForm({
             </p>
 
             <div
-              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragOver(true);
+              }}
               onDragLeave={() => setDragOver(false)}
               onDrop={handleDrop}
               onClick={() => fileInputRef.current?.click()}
               className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all select-none
-                ${dragOver
-                  ? "border-[#1a1a2e] bg-[#1a1a2e]/5 scale-[1.01]"
-                  : selectedFile
-                  ? "border-emerald-400 bg-emerald-50"
-                  : "border-[#d0d0c8] hover:border-[#1a1a2e] hover:bg-[#1a1a2e]/3"}`}
+                ${
+                  dragOver
+                    ? "border-[#1a1a2e] bg-[#1a1a2e]/5 scale-[1.01]"
+                    : selectedFile
+                    ? "border-emerald-400 bg-emerald-50"
+                    : "border-[#d0d0c8] hover:border-[#1a1a2e] hover:bg-[#1a1a2e]/3"
+                }`}
             >
               {selectedFile ? (
                 <div className="flex flex-col items-center gap-1">
-                  <svg className="w-7 h-7 text-emerald-500" fill="none" viewBox="0 0 24 24"
-                    stroke="currentColor" strokeWidth={2}>
+                  <svg
+                    className="w-7 h-7 text-emerald-500"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                   </svg>
                   <p className="text-sm font-medium text-emerald-700">{selectedFile.name}</p>
@@ -258,12 +329,22 @@ function SubmissionForm({
                 </div>
               ) : (
                 <>
-                  <svg className="w-8 h-8 text-[#9a9a9a] mx-auto mb-2" fill="none"
-                    viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round"
-                      d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                  <svg
+                    className="w-8 h-8 text-[#9a9a9a] mx-auto mb-2"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={1.5}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"
+                    />
                   </svg>
-                  <p className="text-sm font-medium text-[#1a1a2e]">Drop file here or click to browse</p>
+                  <p className="text-sm font-medium text-[#1a1a2e]">
+                    Drop file here or click to browse
+                  </p>
                   <p className="text-xs text-[#9a9a9a] mt-1">PDF or DOCX · Max 10 MB</p>
                 </>
               )}
@@ -313,7 +394,7 @@ function SubmissionForm({
               ) : isResubmit ? (
                 "Replace submission"
               ) : (
-                "Submit"
+                isLate ? "Submit (Late)" : "Submit"
               )}
             </button>
           </div>
@@ -326,9 +407,9 @@ function SubmissionForm({
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 const StudentPage = ({ studentId }: { studentId: string }) => {
-  const [assessments,      setAssessments]      = useState<Assessment[]>([]);
-  const [mySubmissions,    setMySubmissions]    = useState<MySubmission[]>([]);
-  const [loading,          setLoading]          = useState(true);
+  const [assessments, setAssessments] = useState<Assessment[]>([]);
+  const [mySubmissions, setMySubmissions] = useState<MySubmission[]>([]);
+  const [loading, setLoading] = useState(true);
   const [activeAssessment, setActiveAssessment] = useState<Assessment | null>(null);
   const [toast, setToast] = useState<{ type: "ok" | "err" | "warn"; msg: string } | null>(null);
 
@@ -349,19 +430,21 @@ const StudentPage = ({ studentId }: { studentId: string }) => {
 
         if (aData.success && Array.isArray(aData.data)) {
           setAssessments(
-            aData.data.map((item: {
-              id: number;
-              name: string;
-              createdDate: string;
-              deadline: string;
-              description: string;
-            }) => ({
-              id:          item.id,
-              name:        item.name,
-              createdDate: new Date(item.createdDate).toISOString().split("T")[0],
-              deadline:    new Date(item.deadline).toISOString().split("T")[0],
-              description: item.description,
-            }))
+            aData.data.map(
+              (item: {
+                id: number;
+                name: string;
+                createdDate: string;
+                deadline: string;
+                description: string;
+              }) => ({
+                id: item.id,
+                name: item.name,
+                createdDate: new Date(item.createdDate).toISOString().split("T")[0],
+                deadline: new Date(item.deadline).toISOString().split("T")[0],
+                description: item.description,
+              })
+            )
           );
         }
 
@@ -418,19 +501,24 @@ const StudentPage = ({ studentId }: { studentId: string }) => {
     );
   }
 
-  const open   = assessments.filter((a) => !isDeadlinePassed(a.deadline));
-  const closed = assessments.filter((a) =>  isDeadlinePassed(a.deadline));
+  const open = assessments.filter((a) => !isDeadlinePassed(a.deadline));
+  const closed = assessments.filter((a) => isDeadlinePassed(a.deadline));
 
   return (
     <div className="min-h-screen bg-[#f7f6f2] font-sans">
-
       {/* Toast */}
       {toast && (
-        <div className={`fixed top-5 right-5 z-50 flex items-center gap-3 px-5 py-3
+        <div
+          className={`fixed top-5 right-5 z-50 flex items-center gap-3 px-5 py-3
           rounded-xl shadow-lg text-sm font-medium
-          ${toast.type === "ok"   ? "bg-[#1a1a2e] text-white"
-          : toast.type === "warn" ? "bg-amber-600 text-white"
-          :                         "bg-[#e63946] text-white"}`}>
+          ${
+            toast.type === "ok"
+              ? "bg-[#1a1a2e] text-white"
+              : toast.type === "warn"
+              ? "bg-amber-600 text-white"
+              : "bg-[#e63946] text-white"
+          }`}
+        >
           <span>{toast.type === "ok" ? "✓" : toast.type === "warn" ? "⚠" : "✕"}</span>
           {toast.msg}
         </div>
@@ -451,7 +539,6 @@ const StudentPage = ({ studentId }: { studentId: string }) => {
       </header>
 
       <main className="max-w-4xl mx-auto px-6 py-8 space-y-10">
-
         {/* ── Open assessments ──────────────────────────────────────────── */}
         <section>
           <div className="flex items-center gap-3 mb-4">
@@ -467,8 +554,8 @@ const StudentPage = ({ studentId }: { studentId: string }) => {
 
           <div className="space-y-3">
             {open.map((a) => {
-              const sub   = getSubmission(a.id);
-              const days  = daysUntil(a.deadline);
+              const sub = getSubmission(a.id);
+              const days = daysUntil(a.deadline);
               const isExp = activeAssessment?.id === a.id;
 
               return (
@@ -483,48 +570,76 @@ const StudentPage = ({ studentId }: { studentId: string }) => {
                     onClick={() => setActiveAssessment(isExp ? null : a)}
                   >
                     <div className="flex items-start gap-4">
-                      <div className="w-10 h-10 rounded-xl bg-[#1a1a2e] flex items-center
-                                      justify-center flex-shrink-0 mt-0.5">
-                        <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24"
-                          stroke="currentColor" strokeWidth={1.8}>
-                          <path strokeLinecap="round" strokeLinejoin="round"
-                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0119 9.414V19a2 2 0 01-2 2z" />
+                      <div
+                        className="w-10 h-10 rounded-xl bg-[#1a1a2e] flex items-center
+                                      justify-center flex-shrink-0 mt-0.5"
+                      >
+                        <svg
+                          className="w-5 h-5 text-white"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth={1.8}
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0119 9.414V19a2 2 0 01-2 2z"
+                          />
                         </svg>
                       </div>
                       <div>
                         <p className="font-semibold text-[#1a1a2e] text-sm">{a.name}</p>
-                        <p className="text-xs text-[#9a9a9a] mt-0.5">Due {formatDate(a.deadline)}</p>
+                        <p className="text-xs text-[#9a9a9a] mt-0.5">
+                          Due {formatDate(a.deadline)}
+                        </p>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-3 flex-shrink-0">
-                      <span className={`text-xs font-mono px-2.5 py-1 rounded-full
-                        ${days <= 1
-                          ? "bg-red-100 text-red-700"
-                          : days <= 3
-                          ? "bg-orange-100 text-orange-700"
-                          : "bg-emerald-100 text-emerald-700"}`}>
+                      <span
+                        className={`text-xs font-mono px-2.5 py-1 rounded-full
+                        ${
+                          days <= 1
+                            ? "bg-red-100 text-red-700"
+                            : days <= 3
+                            ? "bg-orange-100 text-orange-700"
+                            : "bg-emerald-100 text-emerald-700"
+                        }`}
+                      >
                         {days <= 0 ? "Today" : `${days}d left`}
                       </span>
 
                       {sub ? (
-                        <span className={`text-xs font-medium px-2.5 py-1 rounded-full border
-                          ${sub.isLate
-                            ? "bg-orange-50 text-orange-700 border-orange-200"
-                            : "bg-emerald-50 text-emerald-700 border-emerald-200"}`}>
+                        <span
+                          className={`text-xs font-medium px-2.5 py-1 rounded-full border
+                          ${
+                            sub.isLate
+                              ? "bg-orange-50 text-orange-700 border-orange-200"
+                              : "bg-emerald-50 text-emerald-700 border-emerald-200"
+                          }`}
+                        >
                           {sub.isLate ? "⚠ Late" : "✓ Submitted"}
                         </span>
                       ) : (
-                        <span className="text-xs font-medium px-2.5 py-1 rounded-full
-                          bg-[#f0f0ea] text-[#6b6b6b] border border-[#e0e0d8]">
+                        <span
+                          className="text-xs font-medium px-2.5 py-1 rounded-full
+                          bg-[#f0f0ea] text-[#6b6b6b] border border-[#e0e0d8]"
+                        >
                           Not submitted
                         </span>
                       )}
 
                       {/* Chevron — always shown, rotates when expanded */}
                       <svg
-                        className={`w-4 h-4 text-[#9a9a9a] transition-transform ${isExp ? "rotate-180" : ""}`}
-                        fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        className={`w-4 h-4 text-[#9a9a9a] transition-transform ${
+                          isExp ? "rotate-180" : ""
+                        }`}
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                      >
                         <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                       </svg>
                     </div>
@@ -555,41 +670,97 @@ const StudentPage = ({ studentId }: { studentId: string }) => {
               </h2>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-3">
               {closed.map((a) => {
                 const sub = getSubmission(a.id);
+                const isExp = activeAssessment?.id === a.id;
+
                 return (
                   <div
                     key={a.id}
-                    className="bg-white/70 rounded-xl border border-[#e8e8e0] px-5 py-4
-                               flex items-center justify-between opacity-75"
+                    className="bg-white rounded-2xl border border-[#e8e8e0] overflow-hidden shadow-sm"
                   >
-                    <div>
-                      <p className="text-sm font-medium text-[#4a4a4a]">{a.name}</p>
-                      <p className="text-xs text-[#9a9a9a]">Closed {formatDate(a.deadline)}</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {sub ? (
-                        <>
-                          {sub.isLate && (
-                            <span className="text-xs bg-orange-50 text-orange-600
-                              border border-orange-200 px-2 py-0.5 rounded-full">
-                              Late
+                    {/* Card header — clickable to expand for late submission */}
+                    <div
+                      className="flex items-center justify-between px-5 py-4
+                                 hover:bg-[#fafaf8] transition-colors cursor-pointer"
+                      onClick={() => setActiveAssessment(isExp ? null : a)}
+                    >
+                      <div className="flex items-start gap-4">
+                        <div className="w-10 h-10 rounded-xl bg-[#6b6b6b] flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <svg
+                            className="w-5 h-5 text-white"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth={1.8}
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                            />
+                          </svg>
+                        </div>
+                        <div>
+                          <p className="font-semibold text-[#1a1a2e] text-sm">{a.name}</p>
+                          <p className="text-xs text-[#9a9a9a] mt-0.5">
+                            Closed {formatDate(a.deadline)}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3 flex-shrink-0">
+                        {sub ? (
+                          <>
+                            {sub.isLate && (
+                              <span className="text-xs bg-orange-50 text-orange-600 border border-orange-200 px-2 py-0.5 rounded-full">
+                                Late
+                              </span>
+                            )}
+                            <span
+                              className={`text-xs font-semibold px-2.5 py-1 rounded-full
+                              ${
+                                sub.status === "Passed"
+                                  ? "bg-emerald-100 text-emerald-700"
+                                  : sub.status === "Failed"
+                                  ? "bg-red-100 text-red-700"
+                                  : "bg-gray-100 text-gray-600"
+                              }`}
+                            >
+                              {sub.status}
                             </span>
-                          )}
-                          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full
-                            ${sub.status === "Passed"
-                              ? "bg-emerald-100 text-emerald-700"
-                              : sub.status === "Failed"
-                              ? "bg-red-100 text-red-700"
-                              : "bg-gray-100 text-gray-600"}`}>
-                            {sub.status}
+                          </>
+                        ) : (
+                          <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-red-50 text-red-700 border border-red-200">
+                            Missing
                           </span>
-                        </>
-                      ) : (
-                        <span className="text-xs text-[#9a9a9a] italic">Not submitted</span>
-                      )}
+                        )}
+
+                        <svg
+                          className={`w-4 h-4 text-[#9a9a9a] transition-transform ${
+                            isExp ? "rotate-180" : ""
+                          }`}
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth={2}
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </div>
                     </div>
+
+                    {/* Submission form for past assessments - allows late submission */}
+                    {isExp && (
+                      <SubmissionForm
+                        assessment={a}
+                        studentId={studentId}
+                        existingSub={sub}
+                        onSuccess={handleSubmitSuccess}
+                        onCancel={() => setActiveAssessment(null)}
+                      />
+                    )}
                   </div>
                 );
               })}

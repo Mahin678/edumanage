@@ -54,6 +54,12 @@ export default function Header() {
             >
                 Promgramme List
             </Link>
+             <Link
+                href="/dashboard/student"
+                className="text-gray-600 hover:text-gray-900 font-medium transition-colors"
+            >
+                Only for Student View
+            </Link>
             </nav>
 
             {/* Right side - User/Actions */}
