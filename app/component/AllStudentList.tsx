@@ -1,6 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import StudentFilter from "./StudentFilter";
 
+
+export type Programme = {
+  id: string
+  name: string
+  code: string
+  feeAmount: number
+}
+
 export type Student = {
   _id?: string;       // MongoDB ObjectId (optional)
   id?: string | number; // Prisma CUID or numeric ID (optional)
@@ -51,12 +59,7 @@ const AllStudentList = () => {
     };
     return styles[status] || "bg-gray-100 text-gray-700 ring-gray-500/20";
   };
-
-  // Get unique programmes
-  const programmes = useMemo(() => {
-    const set = new Set(studentData.map((s) => s.programmeId));
-    return Array.from(set);
-  }, [studentData]);
+  
 
   // Get unique statuses
   const statuses = useMemo(() => {
@@ -117,6 +120,7 @@ const AllStudentList = () => {
       setDeletingId(null);
     }
   };
+   
 
   return (
     <div>
@@ -126,7 +130,6 @@ const AllStudentList = () => {
         setStatusFilter={setStatusFilter}
         search={search}
         programmeFilter={programmeFilter}
-        programmes={programmes}
         statusFilter={statusFilter}
         statuses={statuses}
         filteredStudents={filteredStudents}

@@ -3,12 +3,13 @@
 
 import { useEffect, useRef, useState } from "react";
 
-const PROGRAMMES = [
-  { value: "", label: "-- Select Programme --" },
-  { value: "BSc-CSE", label: "BSc in Computer Science & Engineering" },
-  { value: "BSc-EEE", label: "BSc in Electrical & Electronic Engineering" },
-  { value: "BBA", label: "Bachelor of Business Administration" },
-];
+type Programme = {
+  id: string
+  name: string
+  code: string
+  feeAmount: number
+}
+
 
 const STATUSES = [
   { value: "", label: "-- Select Status --" },
@@ -69,6 +70,7 @@ const INITIAL_FORM: StudentFormData = {
 
 
 function buildStudentPayload(form: StudentFormData) {
+  console.log(form, 'form');
   return {
     fullName: form.fullName,
     email: form.email,
@@ -263,6 +265,34 @@ export default function NewStudent() {
     setNotification(null);
   };
 
+  const [programmes, setProgrammes]     = useState<Programme[]>([])
+
+  const fetchProgrammes = async () => {
+    try {
+      const response = await fetch("/api/programmes")
+      const data = await response.json()
+      
+      console.log(data);
+
+      if (data.success) {
+         setProgrammes([
+          {
+            id: "",
+            code: "",
+            name: "Select Course",
+          },
+          ...data.data,
+        ]);
+      }
+    } catch (error) {
+      console.error("Error fetching programmes:", error)
+    }
+  }
+
+    useEffect(() => {
+    fetchProgrammes();
+  }, []);
+
   const inputClass = (fieldName: string) => {
     const hasError = Boolean(errors[fieldName]);
     return `block w-full rounded-lg border ${
@@ -438,9 +468,9 @@ export default function NewStudent() {
                   onChange={handleChange}
                   className={inputClass("programmeId")}
                 >
-                  {PROGRAMMES.map((p) => (
-                    <option key={p.value} value={p.value}>
-                      {p.label}
+                  {programmes.map((p) => (
+                    <option key={p.id} value={p.code}>
+                      {p.name}
                     </option>
                   ))}
                 </select>

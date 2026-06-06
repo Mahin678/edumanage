@@ -10,7 +10,8 @@
 //   status: "Active" | "Inactive" | "Graduated" | "Suspended" | string;
 // };
 
-import { Student } from "./AllStudentList";
+import { useEffect, useState } from "react";
+import { Programme, Student } from "./AllStudentList";
 
 type ClearFiltersProps = {
   setSearch: (value: string) => void;
@@ -18,7 +19,6 @@ type ClearFiltersProps = {
   setStatusFilter: (value: string) => void;
   search: string;
   programmeFilter: string;
-  programmes: Array<string>;
   statuses: Array<string>;
   statusFilter: string;
   filteredStudents: Array<Student>;
@@ -26,12 +26,37 @@ type ClearFiltersProps = {
 };
 
 
-const StudentFilter = ({ setSearch, setProgrammeFilter, setStatusFilter, search, programmeFilter, programmes, statusFilter, statuses, filteredStudents, studentData }:ClearFiltersProps ) => {
+const StudentFilter = ({ setSearch, setProgrammeFilter, setStatusFilter, search, programmeFilter, statusFilter, statuses, filteredStudents, studentData }:ClearFiltersProps ) => {
   const clearFilters = (  ) => {
     setSearch("");
     setProgrammeFilter("all");
     setStatusFilter("all");
   };
+
+   const [programmes, setProgrammes] = useState<Programme[]>([]);
+    
+  const fetchProgrammes = async () => {
+    try {
+      const response = await fetch("/api/programmes")
+      const data = await response.json()
+      if (data.success) {
+        setProgrammes([
+          {
+            id: "",
+            code: "",
+            name: "Select Course",
+          },
+          ...data.data,
+        ]);
+      }
+    } catch (error) {
+      console.error("Error fetching programmes:", error)
+    }
+  }
+    useEffect(() => {
+    fetchProgrammes();
+  }, []);
+  
     return (
         <>
          {/* Search & Filter Bar */}
@@ -88,8 +113,8 @@ const StudentFilter = ({ setSearch, setProgrammeFilter, setStatusFilter, search,
             >
               <option value="all">All Programmes</option>
               {programmes.map((p) => (
-                <option key={p} value={p}>
-                  {p}
+                <option key={p.id} value={p.code}>
+                  {p.name}
                 </option>
               ))}
             </select>
