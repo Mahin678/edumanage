@@ -1,13 +1,12 @@
 // app/api/submissions/route.ts
 
 import { prisma } from "@/app/prisma";
-import { mkdir, writeFile } from "fs/promises";
+import { mkdir, unlink, writeFile } from "fs/promises";
 import { NextRequest, NextResponse } from "next/server";
 import path from "path";
 // app/api/submissions/route.ts
 
 // ─── GET /api/submissions?studentId=xxx ──────────────────────────────────────
-// studentId here = the human-readable studentId field on User (e.g. "STU-001")
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -20,18 +19,14 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // First find the user to get their internal id
-    const user = await prisma.user.findUnique({
-      where: { studentId },
-    });
+    const user = await prisma.user.findUnique({ where: { studentId } });
 
     if (!user) {
-      // No user found — just return empty list, not an error
       return NextResponse.json({ success: true, data: [] });
     }
 
     const submissions = await prisma.submission.findMany({
-      where: { userId: user.id },   // use internal id for the FK
+      where: { userId: user.id },
       orderBy: { submittedAt: "desc" },
     });
 
@@ -46,7 +41,10 @@ export async function GET(request: NextRequest) {
 }
 
 // ─── POST /api/submissions ────────────────────────────────────────────────────
-// Accepts multipart/form-data: file, studentId, assessmentId
+// Rules:
+//   no row yet          → 1st submission  ✅ allowed
+//   submissionCount = 1 → 2nd submission  ✅ allowed (replaces file)
+//   submissionCount ≥ 2 → LOCKED          ❌ rejected
 export async function POST(request: NextRequest) {
   try {
     const formData        = await request.formData();
@@ -85,10 +83,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ── Look up user by their human-readable studentId ────────────────────
-    const user = await prisma.user.findUnique({
-      where: { studentId },
-    });
+    // ── Look up user ──────────────────────────────────────────────────────
+    const user = await prisma.user.findUnique({ where: { studentId } });
 
     if (!user) {
       return NextResponse.json(
@@ -109,12 +105,38 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // ── Check existing submission ─────────────────────────────────────────
+    const existing = await prisma.submission.findUnique({
+      where: { userId_assessmentId: { userId: user.id, assessmentId } },
+    });
+
+    // ── LOCK after 2nd submission ─────────────────────────────────────────
+    if (existing && existing.submissionCount >= 2) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:   "Submission locked. You have already used your resubmission attempt.",
+          locked:  true,   // frontend reads this flag to show lock UI
+        },
+        { status: 403 }
+      );
+    }
+
     // ── Determine if late ─────────────────────────────────────────────────
     const now    = new Date();
     const isLate = now > new Date(assessment.deadline);
 
-    // ── Save file to disk ─────────────────────────────────────────────────
-    // Replace writeFile with S3/Cloudflare R2 in production
+    // ── Delete old file from disk (resubmission only) ─────────────────────
+    if (existing?.fileUrl) {
+      try {
+        const oldFilePath = path.join(process.cwd(), "public", existing.fileUrl);
+        await unlink(oldFilePath);
+      } catch (unlinkErr) {
+        console.warn("[POST /api/submissions] Could not delete old file:", unlinkErr);
+      }
+    }
+
+    // ── Save new file to disk ─────────────────────────────────────────────
     const uploadDir = path.join(process.cwd(), "public", "uploads", "submissions");
     await mkdir(uploadDir, { recursive: true });
 
@@ -125,35 +147,33 @@ export async function POST(request: NextRequest) {
 
     const fileUrl = `/uploads/submissions/${safeName}`;
 
-    // ── Upsert: one submission per user per assessment ────────────────────
-    const existing = await prisma.submission.findUnique({
-      where: {
-        userId_assessmentId: { userId: user.id, assessmentId },
-      },
-    });
-
+    // ── Upsert with count ─────────────────────────────────────────────────
     let submission;
     if (existing) {
+      // 2nd submission → update row, bump count 1 → 2
       submission = await prisma.submission.update({
         where: { id: existing.id },
         data: {
           fileUrl,
-          fileName:    file.name,
-          submittedAt: now,
+          fileName:        file.name,
+          submittedAt:     now,
           isLate,
-          status:      "Pending",  // reset to Pending on resubmission
+          status:          "Pending",
+          submissionCount: { increment: 1 },
         },
       });
     } else {
+      // 1st submission → create row with count = 1
       submission = await prisma.submission.create({
         data: {
-          userId:      user.id,    // internal FK — always resolves correctly
+          userId:          user.id,
           assessmentId,
           fileUrl,
-          fileName:    file.name,
-          submittedAt: now,
+          fileName:        file.name,
+          submittedAt:     now,
           isLate,
-          status:      "Pending",
+          status:          "Pending",
+          submissionCount: 1,
         },
       });
     }

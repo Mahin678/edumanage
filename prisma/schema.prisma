@@ -78,24 +78,20 @@ model Assessment {
 }
 
 model Submission {
-  id           String           @id @default(cuid())
+  id              String   @id @default(cuid())
+  userId          String
+  assessmentId    Int
+  fileUrl         String
+  fileName        String
+  submittedAt     DateTime
+  isLate          Boolean  @default(false)
+  status          String   @default("Pending")
+  submissionCount Int      @default(1)   // ← এই line টা যোগ করো
 
-  // FK to User.id (the internal primary key — never breaks)
-  userId       String
-  user         User             @relation(fields: [userId], references: [id])
+  user       User       @relation(fields: [userId], references: [id])
+  assessment Assessment @relation(fields: [assessmentId], references: [id])
 
-  assessmentId Int
-  assessment   Assessment       @relation(fields: [assessmentId], references: [id])
-
-  fileUrl      String
-  fileName     String
-  submittedAt  DateTime         @default(now())
-  isLate       Boolean          @default(false)
-  status       SubmissionStatus @default(Pending)
-
-  // One submission per user per assessment
   @@unique([userId, assessmentId])
-  @@map("submissions")
 }
 
 enum SubmissionStatus {
