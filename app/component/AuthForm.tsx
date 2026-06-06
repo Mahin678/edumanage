@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 
+type Role = "student" | "staff";
+
 export default function AuthForm() {
   const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({
@@ -9,14 +11,23 @@ export default function AuthForm() {
     email: "",
     password: "",
     confirmPassword: "",
+    role: "student" as Role,
   });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!isLogin && formData.password !== formData.confirmPassword) {
+      alert("Passwords do not match!");
+      return;
+    }
+
     console.log("Form submitted:", formData);
   };
 
@@ -32,7 +43,9 @@ export default function AuthForm() {
             {isLogin ? "Sign in to your account" : "Create your account"}
           </h2>
           <p className="mt-2 text-sm text-gray-600">
-            {isLogin ? "Welcome back! Please sign in to continue." : "Join EduManage today."}
+            {isLogin
+              ? "Welcome back! Please sign in to continue."
+              : "Join EduManage today."}
           </p>
         </div>
 
@@ -119,6 +132,52 @@ export default function AuthForm() {
               </div>
             )}
 
+            {/* Role Selector (Signup only) */}
+            {!isLogin && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  I am a
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <label
+                    className={`flex items-center justify-center px-4 py-3 border-2 rounded-lg cursor-pointer transition-all ${
+                      formData.role === "student"
+                        ? "border-blue-600 bg-blue-50 text-blue-700"
+                        : "border-gray-300 bg-white text-gray-700 hover:border-gray-400"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="role"
+                      value="student"
+                      checked={formData.role === "student"}
+                      onChange={handleChange}
+                      className="sr-only"
+                    />
+                    <span className="text-sm font-medium">🎓 Student</span>
+                  </label>
+
+                  <label
+                    className={`flex items-center justify-center px-4 py-3 border-2 rounded-lg cursor-pointer transition-all ${
+                      formData.role === "staff"
+                        ? "border-blue-600 bg-blue-50 text-blue-700"
+                        : "border-gray-300 bg-white text-gray-700 hover:border-gray-400"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="role"
+                      value="staff"
+                      checked={formData.role === "staff"}
+                      onChange={handleChange}
+                      className="sr-only"
+                    />
+                    <span className="text-sm font-medium">👨‍🏫 Staff</span>
+                  </label>
+                </div>
+              </div>
+            )}
+
             {isLogin && (
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
@@ -156,7 +215,9 @@ export default function AuthForm() {
           {/* Toggle */}
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
-              {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}
+              {isLogin
+                ? "Don't have an account?"
+                : "Already have an account?"}{" "}
               <button
                 type="button"
                 onClick={() => setIsLogin(!isLogin)}

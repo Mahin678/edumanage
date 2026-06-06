@@ -12,6 +12,7 @@ type Student = {
   email?: string
   programmeId?: string
   programme?: string
+  status?: string
   halfDueDate: string
   halfPaidDate: string | null
   halfReferenceNo: string | null
@@ -81,21 +82,24 @@ export default function FeesPage() {
         const data = await response.json()
 
         if (data.success && Array.isArray(data.data)) {
-          // Transform API data to match Student type
-         const transformedStudents: Student[] = data.data.map((student: ApiStudent) => ({
-            id: student.id,                              // DB cuid (for React keys)
-            studentId: student.studentId,                 // human-readable ID (for API URLs)
-            name: student.name || "",
-            email: student.email || "",
-            programmeId: student.programmeId || "",
-            programme: student.programmeId || "",
-            halfDueDate: student.halfDueDate ?? "",
-            halfPaidDate: student.halfPaidDate ?? "",
-            halfReferenceNo: student.halfReferenceNo ?? "",
-            fullDueDate: student.fullDueDate ?? "",
-            fullPaidDate: student.fullPaidDate ?? "",
-            fullReferenceNo: student.fullReferenceNo ?? "",
-          }));
+          // Transform API data to match Student type and filter by Enrolled status
+         const transformedStudents: Student[] = data.data
+            .filter((student: ApiStudent) => student.status === "Enrolled")
+            .map((student: ApiStudent) => ({
+              id: student.id,                              // DB cuid (for React keys)
+              studentId: student.studentId,                 // human-readable ID (for API URLs)
+              name: student.name || "",
+              email: student.email || "",
+              programmeId: student.programmeId || "",
+              programme: student.programmeId || "",
+              status: student.status || "",
+              halfDueDate: student.halfDueDate ?? "",
+              halfPaidDate: student.halfPaidDate ?? "",
+              halfReferenceNo: student.halfReferenceNo ?? "",
+              fullDueDate: student.fullDueDate ?? "",
+              fullPaidDate: student.fullPaidDate ?? "",
+              fullReferenceNo: student.fullReferenceNo ?? "",
+            }));
           
           setStudents(transformedStudents)
           setNotification({
@@ -177,7 +181,7 @@ export default function FeesPage() {
   if (loading) {
     return (
       <div className="p-6">
-        <h1 className="text-xl font-medium mb-6">Fees and Payments</h1>
+        <h1 className="text-xl font-medium mb-6">Fees and Payments only for Enrolled Students</h1>
         <div className="text-center py-12">
           <p className="text-gray-500">Loading students from database...</p>
         </div>

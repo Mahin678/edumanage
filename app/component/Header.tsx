@@ -43,7 +43,7 @@ export default function Header() {
                 payment
             </Link>
             <Link
-                href="/dashboard/staff/student"
+                href="/"
                 className="text-gray-600 hover:text-gray-900 font-medium transition-colors"
             >
                 student List
