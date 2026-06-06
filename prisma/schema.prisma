@@ -1,4 +1,4 @@
-// prisma/schema.prisma — complete file, replace yours entirely
+// prisma/schema.prisma — complete file
 
 generator client {
   provider = "prisma-client"
@@ -46,6 +46,7 @@ model User {
 
   // Relations
   submissions Submission[]   // back-relation required by Prisma
+  grades      Grade[]        // ← ADDED: Relation to grades
 }
 
 model Payment {
@@ -73,6 +74,7 @@ model Assessment {
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   submissions Submission[]
+  grades      Grade[]      // ← ADDED: Relation to grades
 
   @@map("assessments")
 }
@@ -86,14 +88,40 @@ model Submission {
   submittedAt     DateTime
   isLate          Boolean  @default(false)
   status          String   @default("Pending")
-  submissionCount Int      @default(1)   // ← এই line টা যোগ করো
+  submissionCount Int      @default(1)
 
   user       User       @relation(fields: [userId], references: [id])
   assessment Assessment @relation(fields: [assessmentId], references: [id])
+  
+  grade      Grade?     // ← ADDED: One-to-one relation with Grade
 
   @@unique([userId, assessmentId])
 }
 
+// ← ADDED: New Grade model
+model Grade {
+  id             String   @id @default(cuid())
+  userId         String
+  assessmentId   Int
+  submissionId   String   @unique   // One grade per submission
+  score          Int                // 0-100
+  classification String             // "Fail" | "Pass" | "Merit" | "Distinction"
+  isPublished    Boolean  @default(false)  // Staff controls visibility
+  gradedBy       String             // Staff ID who graded
+  gradedAt       DateTime @default(now())
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  user       User       @relation(fields: [userId], references: [id])
+  assessment Assessment @relation(fields: [assessmentId], references: [id])
+  submission Submission @relation(fields: [submissionId], references: [id])
+
+  @@unique([userId, assessmentId])  // One grade per student per assessment
+  @@map("grades")
+}
+
+// Keep existing enum (may not be needed if using String for status)
 enum SubmissionStatus {
   Pending
   Passed

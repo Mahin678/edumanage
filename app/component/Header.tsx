@@ -25,12 +25,6 @@ export default function Header() {
                 assessments
             </Link>
             <Link
-                href="/dashboard/staff/assingment"
-                className="text-gray-600 hover:text-gray-900 font-medium transition-colors"
-            >
-                assignments
-            </Link>
-            <Link
                 href="/dashboard/staff/marksheet"
                 className="text-gray-600 hover:text-gray-900 font-medium transition-colors"
             >
