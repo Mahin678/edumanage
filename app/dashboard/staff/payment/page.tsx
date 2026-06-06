@@ -191,7 +191,7 @@ export default function FeesPage() {
 
   return (
     <div className="p-6">
-      <h1 className="text-xl font-medium mb-6">Fees and Payments</h1>
+      <h1 className="text-xl font-medium mb-6">Fees and Payments only for Enrolled Students</h1>
 
       {/* ✅ Notification message */}
       {notification && (
@@ -215,9 +215,7 @@ export default function FeesPage() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-gray-500 text-xs">
               <tr>
-                <th className="px-4 py-3 text-left">Student ID</th>
                 <th className="px-4 py-3 text-left">Name</th>
-                <th className="px-4 py-3 text-left">Email</th>
                 <th className="px-4 py-3 text-left">Programme</th>
                 <th className="px-4 py-3 text-left">Half Paid</th>
                 <th className="px-4 py-3 text-left">Half Ref No</th>
@@ -229,14 +227,10 @@ export default function FeesPage() {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {students.map((student) => {
-                const status = getStatus(student)
+                const status = getStatus(student);
                 return (
                   <tr key={student.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 font-mono text-xs text-gray-500">
-                      {student.id}
-                    </td>
                     <td className="px-4 py-3 font-medium">{student.name}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{student.email}</td>
                     <td className="px-4 py-3 text-gray-500">{student.programme}</td>
 
                     {/* <td className="px-4 py-3 text-gray-500">{student.halfDueDate}</td> */}

@@ -106,3 +106,115 @@ export async function PATCH(
     );
   }
 }
+
+/**
+ * GET /api/students/[id]
+ * Fetch a single student by ID or studentId
+ */
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+
+    const student = await prisma.user.findFirst({
+      where: {
+        OR: [{ id }, { studentId: id }],
+      },
+    });
+
+    if (!student) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Student not found",
+          message: `No student found with ID: ${id}`,
+        },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json(
+      {
+        success: true,
+        data: student,
+      },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("[GET /api/students/[id]] Error:", error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Failed to fetch student",
+        message: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * DELETE /api/students/[id]
+ * Delete a student by ID or studentId
+ */
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+
+    const student = await prisma.user.findFirst({
+      where: {
+        OR: [{ id }, { studentId: id }],
+      },
+    });
+
+    if (!student) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Student not found",
+          message: `No student found with ID: ${id}`,
+        },
+        { status: 404 }
+      );
+    }
+
+    await prisma.user.delete({
+      where: { id: student.id },
+    });
+
+    return NextResponse.json(
+      {
+        success: true,
+        message: `Student ${student.name} deleted successfully`,
+      },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("[DELETE /api/students/[id]] Error:", error);
+
+    if (isPrismaError(error) && error.code === "P2025") {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Student not found",
+          message: "The student has already been deleted",
+        },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Failed to delete student",
+        message: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 }
+    );
+  }
+}

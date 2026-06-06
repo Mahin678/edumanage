@@ -8,9 +8,6 @@ const PROGRAMMES = [
   { value: "BSc-CSE", label: "BSc in Computer Science & Engineering" },
   { value: "BSc-EEE", label: "BSc in Electrical & Electronic Engineering" },
   { value: "BBA", label: "Bachelor of Business Administration" },
-  { value: "MBA", label: "Master of Business Administration" },
-  { value: "MSc-CSE", label: "MSc in Computer Science & Engineering" },
-  { value: "MSc-EEE", label: "MSc in Electrical & Electronic Engineering" },
 ];
 
 const STATUSES = [
