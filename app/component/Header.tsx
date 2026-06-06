@@ -48,6 +48,12 @@ export default function Header() {
             >
                 student List
             </Link>
+            <Link
+                href="/dashboard/staff/programmes"
+                className="text-gray-600 hover:text-gray-900 font-medium transition-colors"
+            >
+                Promgramme List
+            </Link>
             </nav>
 
             {/* Right side - User/Actions */}

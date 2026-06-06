@@ -152,6 +152,24 @@ export async function POST(request: NextRequest) {
     // ---------- Generate student ID ----------
     const studentId = await generateStudentId();
 
+    // ---------- Determine fee from programme ----------
+    let totalFee: number | null = null;
+    let halfFee: number | null = null;
+    let fullFee: number | null = null;
+
+    if (programmeId) {
+      const programme = await prisma.programme.findFirst({
+        where: {
+          OR: [{ id: programmeId.trim() }, { code: programmeId.trim().toUpperCase() }],
+        },
+      });
+      if (programme) {
+        totalFee = programme.feeAmount;
+        halfFee = programme.feeAmount / 2;
+        fullFee = programme.feeAmount;
+      }
+    }
+
     // ---------- Create student ----------
     const newStudent = await prisma.user.create({
       data: {
@@ -163,7 +181,13 @@ export async function POST(request: NextRequest) {
         academicYear: academicYear?.trim() || null,
         status: status?.trim() || "ACTIVE",
 
-        // ✅ New payment fields — all optional, null if not provided
+        // Fee fields
+        totalFee,
+        halfFee,
+        fullFee,
+        adjustedFee: totalFee,
+
+        // Payment fields
         halfDueDate: parsedHalfDue,
         halfPaidDate: parsedHalfPaid,
         halfReferenceNo: halfReferenceNo?.trim() || null,

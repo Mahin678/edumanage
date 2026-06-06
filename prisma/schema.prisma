@@ -13,6 +13,15 @@ datasource db {
 }
 
 // prisma/schema.prisma
+model Programme {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  code        String    @unique
+  feeAmount   Float     @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
 model User {
   id            String    @id @default(cuid())
   studentId     String    @unique
@@ -24,6 +33,12 @@ model User {
   status        String?   @default("ACTIVE")
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+
+  // Fee fields
+  totalFee      Float?
+  halfFee       Float?
+  fullFee       Float?
+  adjustedFee  Float?
 
   // Payment fields (all optional)
   halfDueDate        DateTime?
