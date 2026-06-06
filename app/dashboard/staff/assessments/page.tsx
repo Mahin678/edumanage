@@ -1,7 +1,7 @@
 // app/dashboard/staff/assignments/page.tsx
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type SubmissionStatus = "Pending" | "Passed" | "Failed";
 
@@ -29,35 +29,7 @@ type DeadlineInfo = {
 type ExpandedRows = Record<number, boolean>;
 
 // ===== Dummy Data (with submissions kept for type safety) =====
-const initialAssignments: Assignment[] = [
-  {
-    id: 1,
-    name: "Database Normalization Report",
-    createdDate: "2025-01-10",
-    deadline: "2025-01-25",
-    description:
-      "Submit a 5-page report on 1NF, 2NF, 3NF, BCNF with examples. Use this reference: https://www.geeksforgeeks.org/normal-forms-in-dbms/",
-    submissions: [],
-  },
-  {
-    id: 2,
-    name: "React Component Design",
-    createdDate: "2025-01-15",
-    deadline: "2025-01-30",
-    description:
-      "Build a reusable Card component with props. Reference: https://react.dev/learn/passing-props-to-components",
-    submissions: [],
-  },
-  {
-    id: 3,
-    name: "JavaScript Closures Explained",
-    createdDate: "2025-01-20",
-    deadline: "2025-02-05",
-    description:
-      "Write a blog-style explanation with 3 code examples. https://developer.mozilla.org/en-US/docs/Web/JavaScript/Closures",
-    submissions: [],
-  },
-];
+const initialAssignments: Assignment[] = [];
 
 // ===== Helper Functions =====
 function getDeadlineStatus(_createdDate: string, deadline: string): DeadlineInfo {
@@ -124,6 +96,38 @@ export default function AssignmentsPage() {
 
   const [assignments, setAssignments] = useState<Assignment[]>(initialAssignments);
   const [expandedRows, setExpandedRows] = useState<ExpandedRows>({});
+  const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Fetch assessments on component mount
+  useEffect(() => {
+    const fetchAssessments = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch("/api/assesment");
+        const result = await response.json();
+
+        if (result.success && Array.isArray(result.data)) {
+          const formattedAssignments = result.data.map((item: any) => ({
+            id: item.id,
+            name: item.name,
+            createdDate: new Date(item.createdDate).toISOString().split("T")[0],
+            deadline: new Date(item.deadline).toISOString().split("T")[0],
+            description: item.description,
+            submissions: [],
+          }));
+          setAssignments(formattedAssignments);
+        }
+      } catch (error) {
+        console.error("Failed to fetch assessments:", error);
+        alert("Failed to load assessments. Using empty list.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAssessments();
+  }, []);
 
   const toggleRow = (id: number): void => {
     setExpandedRows((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -142,7 +146,7 @@ export default function AssignmentsPage() {
 
   const handleCloseModal = (): void => {
     setShowNewModal(false);
-  };
+  };  
 
   const handleNewAssignmentChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -167,25 +171,56 @@ export default function AssignmentsPage() {
     return Object.keys(errors).length === 0;
   };
 
-  const handleCreateAssignment = (): void => {
+  const handleCreateAssignment = async (): Promise<void> => {
     if (!validateNewAssignment()) return;
 
-    const newId =
-      assignments.length > 0 ? Math.max(...assignments.map((a) => a.id)) + 1 : 1;
+    setIsSubmitting(true);
 
-    const created: Assignment = {
-      id: newId,
-      name: newAssignment.name,
-      createdDate: newAssignment.createdDate,
-      deadline: newAssignment.deadline,
-      description: newAssignment.description,
-      submissions: [],
-    };
+    try {
+      const response = await fetch("/api/assesment", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: newAssignment.name,
+          createdDate: newAssignment.createdDate,
+          deadline: newAssignment.deadline,
+          description: newAssignment.description,
+        }),
+      });
 
-    setAssignments((prev) => [created, ...prev]);
-    setShowNewModal(false);
-    setExpandedRows((prev) => ({ ...prev, [newId]: true }));
-    alert(`✅ Assignment "${created.name}" created successfully!`);
+      const result = await response.json();
+
+      if (result.success) {
+        const created: Assignment = {
+          id: result.data.id,
+          name: result.data.name,
+          createdDate: new Date(result.data.createdDate).toISOString().split("T")[0],
+          deadline: new Date(result.data.deadline).toISOString().split("T")[0],
+          description: result.data.description,
+          submissions: [],
+        };
+
+        setAssignments((prev) => [created, ...prev]);
+        setShowNewModal(false);
+        setNewAssignment({
+          name: "",
+          createdDate: new Date().toISOString().split("T")[0],
+          deadline: "",
+          description: "",
+        });
+        setExpandedRows((prev) => ({ ...prev, [created.id]: true }));
+        alert(`✅ Assessment "${created.name}" created successfully!`);
+      } else {
+        alert(`❌ Error: ${result.message}`);
+      }
+    } catch (error) {
+      console.error("Error creating assessment:", error);
+      alert("Failed to create assessment. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Stats (submission count removed)
@@ -235,7 +270,11 @@ export default function AssignmentsPage() {
 
         {/* Assignment List */}
         <div className="space-y-4">
-          {assignments.length === 0 ? (
+          {loading ? (
+            <div className="bg-white rounded-xl border border-gray-200 p-12 text-center text-gray-500">
+              ⏳ Loading assessments...
+            </div>
+          ) : assignments.length === 0 ? (
             <div className="bg-white rounded-xl border border-gray-200 p-12 text-center text-gray-500">
               📭 No assignments yet. Click &quot;New Assignment&quot; to create one.
             </div>
@@ -434,9 +473,10 @@ export default function AssignmentsPage() {
               </button>
               <button
                 onClick={handleCreateAssignment}
-                className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 transition-colors"
+                disabled={isSubmitting}
+                className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 transition-colors disabled:bg-indigo-400 disabled:cursor-not-allowed"
               >
-                ✅ Create Assignment
+                {isSubmitting ? "⏳ Creating..." : "✅ Create Assesment"}
               </button>
             </div>
           </div>
