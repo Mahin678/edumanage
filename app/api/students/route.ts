@@ -51,7 +51,6 @@ export async function generateStudentId(): Promise<string> {
 
   return `${prefix}${String(nextSeq).padStart(4, "0")}`;
 }
-
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -59,9 +58,16 @@ export async function POST(request: NextRequest) {
       fullName,
       email,
       dateOfBirth,
-      programmeId,   // ← just a string, no lookup needed
+      programmeId,
       academicYear,
       status,
+      // ✅ New payment fields
+      halfDueDate,
+      halfPaidDate,
+      halfReferenceNo,
+      fullDueDate,
+      fullPaidDate,
+      fullReferenceNo,
     } = body;
 
     // ---------- Required field validation ----------
@@ -108,15 +114,39 @@ export async function POST(request: NextRequest) {
     }
 
     // ---------- Date validation ----------
-    let parsedDOB: Date | null = null;
-    if (dateOfBirth) {
-      parsedDOB = new Date(dateOfBirth);
-      if (isNaN(parsedDOB.getTime())) {
-        return NextResponse.json(
-          { success: false, error: "Invalid date", message: "'dateOfBirth' is not a valid date" },
-          { status: 400 }
-        );
+    const parseOptionalDate = (value: unknown, fieldName: string): Date | null => {
+      if (value === undefined || value === null || value === "") return null;
+      if (typeof value !== "string") {
+        throw new Error(`'${fieldName}' must be a string`);
       }
+      const d = new Date(value);
+      if (isNaN(d.getTime())) {
+        throw new Error(`'${fieldName}' is not a valid date`);
+      }
+      return d;
+    };
+
+    let parsedDOB: Date | null;
+    let parsedHalfDue: Date | null;
+    let parsedHalfPaid: Date | null;
+    let parsedFullDue: Date | null;
+    let parsedFullPaid: Date | null;
+
+    try {
+      parsedDOB = parseOptionalDate(dateOfBirth, "dateOfBirth");
+      parsedHalfDue = parseOptionalDate(halfDueDate, "halfDueDate");
+      parsedHalfPaid = parseOptionalDate(halfPaidDate, "halfPaidDate");
+      parsedFullDue = parseOptionalDate(fullDueDate, "fullDueDate");
+      parsedFullPaid = parseOptionalDate(fullPaidDate, "fullPaidDate");
+    } catch (err) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Invalid date",
+          message: err instanceof Error ? err.message : "Unknown error",
+        },
+        { status: 400 }
+      );
     }
 
     // ---------- Generate student ID ----------
@@ -129,9 +159,17 @@ export async function POST(request: NextRequest) {
         name: fullName.trim(),
         email: email.trim().toLowerCase(),
         dateOfBirth: parsedDOB,
-        programmeId: programmeId?.trim() || null,   // ← straight string, no relation
+        programmeId: programmeId?.trim() || null,
         academicYear: academicYear?.trim() || null,
         status: status?.trim() || "ACTIVE",
+
+        // ✅ New payment fields — all optional, null if not provided
+        halfDueDate: parsedHalfDue,
+        halfPaidDate: parsedHalfPaid,
+        halfReferenceNo: halfReferenceNo?.trim() || null,
+        fullDueDate: parsedFullDue,
+        fullPaidDate: parsedFullPaid,
+        fullReferenceNo: fullReferenceNo?.trim() || null,
       },
     });
 
@@ -159,17 +197,6 @@ export async function POST(request: NextRequest) {
           { status: 409 }
         );
       }
-
-      if (error.code === "P2003") {
-        return NextResponse.json(
-          {
-            success: false,
-            error: "Invalid reference",
-            message: "One of the referenced values does not exist",
-          },
-          { status: 400 }
-        );
-      }
     }
 
     return NextResponse.json(
@@ -186,8 +213,10 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const students = await prisma.user.findMany();
-    
+    const students = await prisma.user.findMany({
+      orderBy: { createdAt: "desc" },
+    });
+
     return NextResponse.json(
       {
         success: true,
@@ -208,3 +237,5 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+

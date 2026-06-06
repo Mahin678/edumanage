@@ -12,15 +12,41 @@ datasource db {
   provider = "postgresql"
 }
 
+// prisma/schema.prisma
 model User {
   id            String    @id @default(cuid())
   studentId     String    @unique
   name          String
   email         String    @unique
   dateOfBirth   DateTime?
-  programmeId   String?   // Store programme code as string, not FK
+  programmeId   String?
   academicYear  String?
   status        String?   @default("ACTIVE")
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+
+  // Payment fields (all optional)
+  halfDueDate        DateTime?
+  halfPaidDate       DateTime?
+  halfReferenceNo    String?
+  fullDueDate        DateTime?
+  fullPaidDate       DateTime?
+  fullReferenceNo    String?
+}
+
+
+model Payment {
+  id                String    @id @default(cuid())
+  studentId         String    @unique
+  studentName       String
+  email             String?
+  programmeId       String?
+  halfDueDate       DateTime?
+  halfPaidDate      DateTime?
+  halfReferenceNo   String?
+  fullDueDate       DateTime?
+  fullPaidDate      DateTime?
+  fullReferenceNo   String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 }

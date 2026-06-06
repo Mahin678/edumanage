@@ -37,6 +37,13 @@ type StudentFormData = {
   programmeId: string;
   academicYear: string;
   status: string;
+  // ✅ New payment fields
+  halfDueDate: string;
+  halfPaidDate: string;
+  halfReferenceNo: string;
+  fullDueDate: string;
+  fullPaidDate: string;
+  fullReferenceNo: string;
 };
 
 type Notification = {
@@ -47,6 +54,7 @@ type Notification = {
   id: number; // for animation re-trigger
 };
 
+
 const INITIAL_FORM: StudentFormData = {
   fullName: "",
   email: "",
@@ -54,7 +62,14 @@ const INITIAL_FORM: StudentFormData = {
   programmeId: "",
   academicYear: "",
   status: "",
+  halfDueDate: "",
+  halfPaidDate: "",
+  halfReferenceNo: "",
+  fullDueDate: "",
+  fullPaidDate: "",
+  fullReferenceNo: "",
 };
+
 
 function buildStudentPayload(form: StudentFormData) {
   return {
@@ -64,8 +79,16 @@ function buildStudentPayload(form: StudentFormData) {
     programmeId: form.programmeId || undefined,
     academicYear: form.academicYear || undefined,
     status: form.status || undefined,
+    // ✅ Payment fields — only sent if filled
+    halfDueDate: form.halfDueDate || undefined,
+    halfPaidDate: form.halfPaidDate || undefined,
+    halfReferenceNo: form.halfReferenceNo || undefined,
+    fullDueDate: form.fullDueDate || undefined,
+    fullPaidDate: form.fullPaidDate || undefined,
+    fullReferenceNo: form.fullReferenceNo || undefined,
   };
 }
+
 
 export default function NewStudent() {
   const isMountedRef = useRef(true);

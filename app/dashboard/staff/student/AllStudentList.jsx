@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+
 const AllStudentList = () => {
   const STUDENTS_DATA = [
     {
@@ -61,6 +63,30 @@ const AllStudentList = () => {
       status: "Inactive",
     },
   ];
+
+  const [studentData, setStudentData] = useState([]);
+
+  useEffect(() => {
+    const fetchStudents = async () => {
+      try {
+        const response = await fetch("/api/students", {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          setStudentData(data?.data);
+        }
+      } catch (error) {
+        console.error("Error fetching students:", error);
+      }
+    };
+
+    fetchStudents();
+  }, []);
+
   // Status badge color mapping
   const getStatusStyles = (status) => {
     const styles = {
@@ -137,7 +163,17 @@ const AllStudentList = () => {
 
               {/* Table Body */}
               <tbody className="divide-y divide-gray-200 bg-white">
-                {STUDENTS_DATA.map((student, index) => (
+                {studentData.length === 0 && (
+                  <tr>
+                    <td
+                      colSpan="9"
+                      className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-500 sm:pl-6"
+                    >
+                      No students found || Or loading...
+                    </td>
+                  </tr>
+                )}
+                {studentData?.map((student, index) => (
                   <tr
                     key={student.id}
                     className="hover:bg-gray-50 transition-colors"
@@ -152,7 +188,7 @@ const AllStudentList = () => {
                       <div className="flex items-center">
                         <div className="h-9 w-9 flex-shrink-0">
                           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white text-sm font-semibold">
-                            {student.fullName.charAt(0)}
+                            {student.fullName}
                           </div>
                         </div>
                         <div className="ml-3">

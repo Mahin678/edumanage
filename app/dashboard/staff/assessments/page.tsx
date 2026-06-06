@@ -129,11 +129,6 @@ export default function AssignmentsPage() {
     setExpandedRows((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
-  const handleSaveAll = (): void => {
-    console.log("All data saved:", assignments);
-    alert("✅ All changes saved successfully!");
-  };
-
   const handleOpenModal = (): void => {
     setShowNewModal(true);
     setNewAssignment({
@@ -210,16 +205,10 @@ export default function AssignmentsPage() {
           </div>
           <div className="flex gap-2">
             <button
-              onClick={handleSaveAll}
-              className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500 transition-colors"
-            >
-              💾 Save All
-            </button>
-            <button
               onClick={handleOpenModal}
               className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 transition-colors"
             >
-              + New Assignment
+              + New Assesment
             </button>
           </div>
         </div>
@@ -227,7 +216,7 @@ export default function AssignmentsPage() {
         {/* Stats - Simplified (no submission stats) */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-            <p className="text-sm font-medium text-gray-600">Total Assignments</p>
+            <p className="text-sm font-medium text-gray-600">Total Assessments</p>
             <p className="mt-2 text-2xl font-bold text-gray-900">{totalAssignments}</p>
           </div>
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
