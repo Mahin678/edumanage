@@ -1,7 +1,4 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
+// prisma/schema.prisma — complete file, replace yours entirely
 
 generator client {
   provider = "prisma-client"
@@ -12,66 +9,97 @@ datasource db {
   provider = "postgresql"
 }
 
-// prisma/schema.prisma
 model Programme {
-  id          String    @id @default(cuid())
-  name        String    @unique
-  code        String    @unique
-  feeAmount   Float     @default(0)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id        String   @id @default(cuid())
+  name      String   @unique
+  code      String   @unique
+  feeAmount Float    @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model User {
-  id            String    @id @default(cuid())
-  studentId     String    @unique
-  name          String
-  email         String    @unique
-  dateOfBirth   DateTime?
-  programmeId   String?
-  academicYear  String?
-  status        String?   @default("ACTIVE")
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id           String   @id @default(cuid())
+  studentId    String   @unique          // human-readable e.g. "STU-001"
+  name         String
+  email        String   @unique
+  dateOfBirth  DateTime?
+  programmeId  String?
+  academicYear String?
+  status       String?  @default("ACTIVE")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   // Fee fields
-  totalFee      Float?
-  halfFee       Float?
-  fullFee       Float?
-  adjustedFee  Float?
+  totalFee    Float?
+  halfFee     Float?
+  fullFee     Float?
+  adjustedFee Float?
 
-  // Payment fields (all optional)
-  halfDueDate        DateTime?
-  halfPaidDate       DateTime?
-  halfReferenceNo    String?
-  fullDueDate        DateTime?
-  fullPaidDate       DateTime?
-  fullReferenceNo    String?
+  // Payment fields
+  halfDueDate     DateTime?
+  halfPaidDate    DateTime?
+  halfReferenceNo String?
+  fullDueDate     DateTime?
+  fullPaidDate    DateTime?
+  fullReferenceNo String?
+
+  // Relations
+  submissions Submission[]   // back-relation required by Prisma
 }
 
-
 model Payment {
-  id                String    @id @default(cuid())
-  studentId         String    @unique
-  studentName       String
-  email             String?
-  programmeId       String?
-  halfDueDate       DateTime?
-  halfPaidDate      DateTime?
-  halfReferenceNo   String?
-  fullDueDate       DateTime?
-  fullPaidDate      DateTime?
-  fullReferenceNo   String?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  id              String    @id @default(cuid())
+  studentId       String    @unique
+  studentName     String
+  email           String?
+  programmeId     String?
+  halfDueDate     DateTime?
+  halfPaidDate    DateTime?
+  halfReferenceNo String?
+  fullDueDate     DateTime?
+  fullPaidDate    DateTime?
+  fullReferenceNo String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 }
 
 model Assessment {
-  id            Int       @id @default(autoincrement())
-  name          String
-  createdDate   DateTime
-  deadline      DateTime
-  description   String
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id          Int          @id @default(autoincrement())
+  name        String
+  description String
+  createdDate DateTime     @default(now())
+  deadline    DateTime
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  submissions Submission[]
+
+  @@map("assessments")
+}
+
+model Submission {
+  id           String           @id @default(cuid())
+
+  // FK to User.id (the internal primary key — never breaks)
+  userId       String
+  user         User             @relation(fields: [userId], references: [id])
+
+  assessmentId Int
+  assessment   Assessment       @relation(fields: [assessmentId], references: [id])
+
+  fileUrl      String
+  fileName     String
+  submittedAt  DateTime         @default(now())
+  isLate       Boolean          @default(false)
+  status       SubmissionStatus @default(Pending)
+
+  // One submission per user per assessment
+  @@unique([userId, assessmentId])
+  @@map("submissions")
+}
+
+enum SubmissionStatus {
+  Pending
+  Passed
+  Failed
 }

@@ -277,7 +277,7 @@ export default function StudentAssignmentsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                📚 Filter by Assignment
+                📚 Filter by Assesment
               </label>
               <select
                 value={selectedAssignmentId}
