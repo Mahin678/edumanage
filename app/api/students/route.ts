@@ -234,11 +234,14 @@ export async function POST(request: NextRequest) {
   }
 }
 
-
 export async function GET(request: NextRequest) {
   try {
     const students = await prisma.user.findMany({
       orderBy: { createdAt: "desc" },
+
+      include: {
+        programme: true,
+      },
     });
 
     return NextResponse.json(

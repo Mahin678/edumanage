@@ -15,6 +15,7 @@ export type Student = {
   studentId: string;  // e.g. "STU-2024-0001"
   name: string;
   email: string;
+  programme: Programme; // Assuming programme is an object with details
   dateOfBirth: string; // ISO date string
   programmeId: string;
   academicYear: string;
@@ -121,7 +122,7 @@ const AllStudentList = () => {
     }
   };
    
-
+  console.log(filteredStudents, "filteredStudents")
   return (
     <div>
       <StudentFilter
@@ -201,7 +202,7 @@ const AllStudentList = () => {
                       </td>
                       <td className="whitespace-nowrap px-3 py-4">
                         <span className="inline-flex items-center rounded-md bg-purple-50 px-2 py-1 text-xs font-medium text-purple-700 ring-1 ring-inset ring-purple-700/10">
-                          {student.programmeId}
+                          {student?.programme?.name}
                         </span>
                       </td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-600">{student.academicYear}</td>

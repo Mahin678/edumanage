@@ -113,7 +113,7 @@ const StudentFilter = ({ setSearch, setProgrammeFilter, setStatusFilter, search,
             >
               <option value="all">All Programmes</option>
               {programmes.map((p) => (
-                <option key={p.id} value={p.code}>
+                <option key={p.id} value={p.id}>
                   {p.name}
                 </option>
               ))}
