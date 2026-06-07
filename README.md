@@ -45,7 +45,7 @@ Create a `.env` file in the project root:
 DATABASE_URL="postgresql://neondb_owner:YOURPASSWORD@ep-raspy-dream-amu6wvh5-pooler.c-5.us-east-1.aws.neon.tech/neondb?sslmode=require"
 ```
 
-Replace `YOURPASSWORD` with your actual Neon database password.
+Replace `YOURPASSWORD` with your actual Neon database password. either actuall neon connection string, but ensure structure should be same.
 
 ### 4. Generate Prisma client
 
